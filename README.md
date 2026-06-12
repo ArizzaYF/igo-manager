@@ -410,6 +410,7 @@ AplicacionEmpresa/
 | **Desarrollador Full Stack** | Jairo Andres Ariza Hernandez |
 | **Desarrollador** | Julian Jaimes Reyes |
 | **Desarrollador** | Julian Rene Vacca Ariza |
+| **Desarrollador** | Cristian Leandro Ortiz Rodriguez |
 | **Cliente** | Dinámica del Oriente S.A.S. |
 
 </div>
