@@ -1,0 +1,1 @@
+LA estructura del proyecto, y como esta construida la base datos es INMUTABLE, eso NO SE CAMBIA, eso ya quedo asi PUNTO.

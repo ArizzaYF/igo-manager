@@ -1,0 +1,12 @@
+en VScode ingresa a cmd, NO a powershell
+
+ejecuta estos comandos en secuencia:
+cd admin
+pnpm install
+pnpm run dev
+
+cuando cargue el login ingresa estas credenciales
+Correo: admin@dinamicadeloriente.com
+Contraseña: Admin12345*
+
+Ahi se cargara el panel administrativo

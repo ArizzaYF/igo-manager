@@ -1,0 +1,9 @@
+conectar el telefono usb con el portatil
+verificar:
+
+adb devices
+despues ejecutar
+cd mobile
+
+y finalmente 
+flutter run -d RFCT710TQVT

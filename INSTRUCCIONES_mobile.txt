@@ -1,0 +1,38 @@
+IGO Manager - M�dulo Mobile
+=============================
+
+REQUISITOS
+----------
+- Flutter >= 3.22 (https://docs.flutter.dev/get-started/install)
+- Dart >= 3.2 (viene con Flutter)
+- Chrome (�ltima versi�n)
+
+INSTALACI�N
+-----------
+cd mobile
+flutter pub get
+
+EJECUCI�N
+---------
+cd mobile
+flutter run -d chrome
+
+La app se conecta autom�ticamente a Supabase.
+No se necesita configuraci�n adicional.
+
+DEPENDENCIAS PRINCIPALES
+------------------------
+- supabase_flutter    backend
+- flutter_riverpod    estado
+- go_router           navegaci�n
+- fl_chart            gr�ficas
+- intl                fechas
+- dartz               Either/Failure
+- shared_preferences  sesi�n local
+- bcrypt              hash de contrase�a
+
+COMANDOS �TILES
+---------------
+flutter analyze                an�lisis est�tico
+flutter run -d chrome          ejecutar en web
+flutter clean && flutter pub get   limpiar y reinstalar

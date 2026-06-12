@@ -1,0 +1,20 @@
+Una vez que adb --version funcione en la terminal, sigue estos pasos:
+Paso 1 — Conecta el teléfono por USB (primera vez obligatorio)
+El teléfono debe tener:
+- Modo desarrollador activado (Ajustes → Acerca del teléfono → toca 7 veces "Número de compilación")
+- Depuración USB activado (Ajustes → Opciones de desarrollador)
+Conecta el cable USB. En el teléfono te aparecerá una ventana de autorización → acepta y marca "Recordar".
+Verifica con:
+adb devices
+Debería aparecer tu dispositivo como List of devices attached + un código.
+Paso 2 — Cambia a modo WiFi (sin cable)
+adb tcpip 5555
+Desconecta el cable USB.
+Paso 3 — Conecta por WiFi
+adb connect 192.168.0.15:5555
+Paso 4 — Ejecuta la app
+cd mobile
+flutter run
+Para desconectar al final:
+adb disconnect 192.168.0.15:5555
+Asegúrate de que el teléfono y la PC estén en la misma red WiFi.

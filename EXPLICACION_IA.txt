@@ -1,0 +1,382 @@
+CONTEXTO PARA NUEVA CONVERSACION CON IA
+==========================================
+Proyecto: IGO Manager - Modulo Mobile (Flutter) + Modulo Admin (React)
+App para priorizacion empresarial usando matriz IGO con Supabase
+
+SESIONES ANTERIORES (resumen de lo trabajado)
+---------------------------------------------
+
+1. CORRECCIONES INICIALES (sesion 1)
+   - 5 errores de sintaxis/API: CardTheme→CardThemeData,
+     Border(color:)→Border.all(color:), $dias→$days, fl_chart 0.69.x API,
+     LocalStorage ocultado del import de supabase
+   - Soporte web: flutter create . --platforms web
+
+2. CONEXION A SUPABASE
+   - URL: https://qjawpuzvsiubkhurxrfr.supabase.co
+   - Anon Key: sb_publishable_zn8ukP6b-uUzkXR3IuiW0Q_p8MrUTRa
+   - Se reemplazaron placeholders por screens reales
+   - Se conectaron todos los providers (iniciativasProvider, planesProvider, authProvider)
+
+3. PANTALLAS REESCRITAS (mobile)
+   - planes_list_screen, create_plan_screen, plan_detail_screen
+   - matriz_igo_screen (grafica iniciativas reales)
+   - perfil_screen (usuario real + logout funcional)
+   - Se agrego getPlanById al PlanRepository
+
+4. REGISTRO Y LOGIN
+   - Registro: usa RPC register_app_user (insercion atomica, crypt() server-side)
+   - Login: maneja respuesta como List (SETOF), luego obtiene perfil completo
+   - UsuarioModel.fromJson() tolera null en created_at/updated_at
+   - company_size_type: Micro (<10) -> Micro <10 (sin parentesis)
+   - plan_status: cancelado -> abortado
+
+5. CORRECCIONES DE MODELOS (DB SCHEMA INMUTABLE)
+   - quadrant: eliminado de toJson() (GENERATED ALWAYS)
+   - classified_at: excluido de toJson() cuando es null
+   - PlanModel.toJson() y TaskModel.toJson(): omiten id vacio
+
+6. FUNCIONALIDADES AGREGADAS (mobile)
+   - Editar iniciativa (ActualizarIniciativaUseCase + edit mode)
+   - BottomNavigationBar con 4 tabs
+   - Boton "Crear Plan de Accion" en iniciativa_detail_screen
+   - Boton "Recalificar priorizacion"
+   - Ejes de matriz: X=Gobernabilidad, Y=Importancia
+   - PlanRepository.updatePlanProgress()
+   - Responsable en tareas (dialog + display)
+
+============================================
+SESION 2 - MODULO ADMIN (React+Recharts+Tailwind)
+============================================
+Se creo el panel admin como SPA en React con Vite (+ Tailwind, Recharts):
+
+/admin/src/pages/
+  - Dashboard.tsx: KPIs, graficos, tarjetas premium
+  - MatrizAgregada.tsx: filtros + ScatterPlot
+  - NubePalabras.tsx: word cloud + tabla de frecuencias
+  - Demographic.tsx, Login.tsx, NotFound.tsx
+
+/admin/src/components/
+  - ScatterPlot.tsx: scatter con clustering, tooltip custom y modal
+  - WordCloud.tsx: nube de palabras interactiva con hover/tooltip
+  - CustomTooltip.tsx: tooltip detallado para scatter
+
+Caracteristicas del Admin:
+  - Polling 30s en todas las paginas (Dashboard, Matriz, NubePalabras)
+  - Escala IGO unificada: slider 1-5 mapeado x2 a DB 1-10; UI muestra 0-5
+  - Clustering de puntos en matriz por coordenadas (importancia_5, gobernabilidad_5)
+  - ClusterShape con badge numerico (+3, +5, etc.)
+  - Tooltip custom con 300ms de delay para evitar race condition (mouseleave prematuro)
+  - ClusterModal: modal con listado detallado de iniciativas en cada coordenada
+  - Word Cloud con extraccion client-side: tokeniza titulos+descripciones,
+    filtra ~200 stop words en espanol, calcula frecuencia termino
+  - Vite build: assets/index-CGQ831Dz.js (~876 KB, chunk warning esperado)
+
+============================================
+SESIONES 3-6 - MOBILE: FEATURES COMPLETADOS
+============================================
+
+7. SPEECH-TO-TEXT CON WAVEFORM
+   - Archivo: mobile/lib/presentation/widgets/audio_recorder_widget.dart
+   - Dependencia: speech_to_text: ^6.6.2 (pubspec.yaml)
+   - Rewrite completo: reemplaza stub anterior por implementacion real
+   - Waveform en tiempo real via _WaveformPainter (CustomPainter, 30 barras)
+   - VAD: onSoundLevelChange del SpeechToText.listen() actualiza barras (escala 0-9)
+   - Control total del usuario: boton rojo "Detener" visible durante grabacion
+   - Sin auto-cierre por silencio (listenFor 60s, pauseFor 60s)
+   - Texto parcial en vivo, boton "Cancelar", pulso animado rojo mientras graba
+   - Integrado en create_iniciativa_screen.dart (dictado llena titulo o descripcion)
+   - Uso de SpeechListenOptions (partialResults: true, cancelOnError: false)
+
+8. MODO OSCURO
+   - Archivo clave: mobile/lib/core/constants/app_colors.dart
+     - Reescrito con pares de colores light/dark (_lightTextPrimary, _darkTextPrimary, etc.)
+     - Metodos estaticos textPrimaryOf(BuildContext) para obtener color segun tema
+     - Luego revertido a constantes estaticas para screens individuales,
+       pero adaptado via app_theme.dart
+   - Archivo: mobile/lib/core/theme/app_theme.dart
+     - _baseTheme acepta bool isDark
+     - AppBar: fondo #1A1A2E en dark, blanco en light (sin hardcode)
+     - BottomNavigationBar: adapta backgroundColor/selectedItemColor
+     - NavigationBar: adapta colors via tema
+   - 15 screens migradas de hardcoded AppColors.primary a theme-driven en AppBar
+   - _MatrizPainter acepta parametro isDark para colores de grid/ejes
+   - SwitchListTile usa activeTrackColor: AppColors.primary (funciona en ambos modos)
+
+9. MATRIZ OVERLAP (clustering mobile)
+   - mobile/lib/presentation/screens/matriz/matriz_igo_screen.dart
+   - Badge counter (circulo rojo con numero) en puntos agrupados por coordenada
+   - Tap abre bottom sheet modal listando todas las iniciativas en esa coordenada
+   - Cada item en el modal es tappable -> navega a detalle
+
+10. PLAN NAMES FIX
+    - planes_list_screen.dart ahora importa iniciativasProvider
+    - Busca iniciativa por plan.initiativeId para mostrar titulo real (no UUID)
+
+11. CHANGE PASSWORD
+    - SQL: funcion change_password_app_user() en Supabase (ver contexto_ia/db_alimentacion_extra.sql)
+      - Parametros: p_user_id uuid, p_current_password text, p_new_password text
+      - Verifica current_password con crypt() contra password_hash almacenado
+      - Actualiza password_hash y password_plain_demo
+      - SECURITY DEFINER para bypassear RLS
+    - Mobile: configuracion_screen.dart -> _showChangePasswordDialog()
+      - Validacion: min 8 chars, mayuscula, numero, caracter especial
+      - Llama RPC directamente via SupabaseClientManager.client.rpc()
+      - ScaffoldMessenger capturado antes del async gap
+
+12. DEPRECATION FIXES (mobile)
+    - withOpacity() -> withValues(alpha:) en TODOS los archivos
+    - activeColor -> activeTrackColor en SwitchListTile
+    - partialResults/cancelOnError movidos a SpeechListenOptions
+    - const textStyle modifier fijado en _MatrizPainter
+    - Imports no utilizados removidos (dartz, failures, exceptions)
+
+13. MISC FIXES (mobile)
+    - theme_provider.dart: ref.read(localStorageProvider) -> LocalStorage.instance
+    - AppStrings: matrixTitle -> igoMatrizTitle, profileTitle -> perfilTitle
+    - auth_provider.dart y planes_provider.dart: imports no usados removidos
+
+============================================
+SESION 7 - BUGS CORREGIDOS (admin)
+============================================
+
+14. NUBE PALABRAS NO CARGABA
+    - Causa: supabase.from('iniciativas') -> la tabla se llama 'initiatives'
+    - Causa secundaria: .select('..., sector, company_size') -> esas columnas
+      estan en profiles, no en initiatives
+    - Fix: cambiar FROM a 'initiatives' y select a solo 'title, description, quadrant'
+
+15. SCATTERPLOT TOOLTIP RACE CONDITION
+    - Causa: Recharts Tooltip se cerraba al salir del circulo SVG,
+      impidiendo hacer click en "Ver todas"
+    - Fix: Reemplazar <Tooltip> de Recharts por tooltip HTML propio:
+      - 300ms setTimeout en mouseleave
+      - pointer-events: auto en el tooltip
+      - onMouseEnter cancela el timeout
+      - Boton "Ver todas" abre ClusterModal ya existente
+
+16. CAMBIO PASSWORD - FUNCION FALTANTE
+    - Causa: change_password_app_user() no existia en Supabase
+    - Fix: Agregada al SQL (db_alimentacion_extra.sql) y ejecutar en SQL Editor
+
+============================================
+ESTADO ACTUAL
+============================================
+- Mobile MVP ~95% completo
+- Admin Web funcional (Dashboard, Matriz, NubePalabras, Demografia)
+- Flutter: flutter run -d chrome
+- Admin: cd admin && npm run dev
+- Build admin: npx vite build (OK)
+- Flutter analyze: 0 errores (solo warnings pre-existentes de unused_imports)
+
+LO QUE FUNCIONA (mobile)
+-----------------------
+- Splash screen con auto-login
+- Onboarding completo (welcome, registro step1/2, login, terms)
+- CRUD de iniciativas (crear, listar, detalle, archivar, editar)
+- Priorizacion IGO con sliders y feedback de cuadrante
+- Matriz IGO interactiva con CustomPainter + clustering con badge + modal
+- CRUD de planes de accion (crear, listar, detalle)
+- Tareas dentro de planes (agregar, toggle completado, responsable)
+- Progreso de planes persistido
+- Perfil de usuario y configuracion (incluye cambio contrasena)
+- BottomNavigationBar con 4 tabs
+- Speech-to-text con waveform en tiempo real
+- Modo oscuro (theme adaptativo en AppBar, BottomNav, Matriz, colores generales)
+
+LO QUE FUNCIONA (admin)
+-----------------------
+- Dashboard con KPIs, graficos, polling 30s
+- Matriz IGO Agregada con clustering, tooltips, modal drill-down
+- Nube de Palabras con extraccion client-side y tabla de frecuencias
+- Demografia de usuarios (sector, tamano empresa, edad, genero)
+- Login con sesion
+
+LO QUE FALTA (no implementado)
+------------------------------
+- Notificaciones push (DB tiene infraestructura, Flutter no)
+- Recuperacion de contrasena (login_screen.dart dice "proximamente")
+- Tests unitarios (solo widget_test.dart default)
+
+CONTEXTO CRITICO
+----------------
+- Schema DB en contexto_ia/ INMUTABLE (no modificar tablas ni columnas)
+- Se pueden AGREGAR RPC functions a Supabase (register_app_user, change_password_app_user ya existen)
+- profiles.id FK referencia public.app_users(id)
+- quadrant es GENERATED ALWAYS AS (...) STORED -> no se inserta ni actualiza
+- classified_at tiene DEFAULT now() -> omitir si null
+- action_plans.initiative_id tiene UNIQUE constraint (1 plan por iniciativa)
+- company_size_type enum: 'Micro <10' (sin parentesis)
+- plan_status enum: 'abortado' (no 'cancelado')
+- Tabla initiatives (no iniciativas) en DB - el nombre correcto es 'initiatives'
+
+ARCHIVOS CLAVE MOBILE
+---------------------
+- mobile/lib/core/constants/app_colors.dart
+- mobile/lib/core/utils/responsive_helper.dart
+- mobile/lib/core/theme/app_theme.dart
+- mobile/lib/presentation/widgets/audio_recorder_widget.dart
+- mobile/lib/presentation/screens/matriz/matriz_igo_screen.dart
+- mobile/lib/presentation/screens/perfil/configuracion_screen.dart
+- mobile/lib/presentation/screens/iniciativas/create_iniciativa_screen.dart
+- mobile/lib/presentation/screens/planes/planes_list_screen.dart
+- mobile/lib/data/repositories/auth_repository.dart
+- mobile/lib/data/repositories/iniciativa_repository.dart
+- mobile/lib/data/repositories/plan_repository.dart
+- mobile/lib/data/models/plan_accion_model.dart
+- mobile/lib/data/models/usuario_model.dart
+- mobile/lib/data/models/iniciativa_model.dart
+- mobile/lib/presentation/providers/iniciativas_provider.dart
+- mobile/lib/presentation/providers/planes_provider.dart
+- mobile/lib/presentation/providers/theme_provider.dart
+- mobile/lib/presentation/widgets/home_shell.dart
+- mobile/lib/main.dart
+- mobile/pubspec.yaml
+
+ARCHIVOS CLAVE ADMIN
+--------------------
+- admin/src/components/ScatterPlot.tsx
+- admin/src/components/WordCloud.tsx
+- admin/src/pages/Dashboard.tsx
+- admin/src/pages/MatrizAgregada.tsx
+- admin/src/pages/NubePalabras.tsx
+- admin/src/api/metricas.api.ts
+- admin/src/api/iniciativas.api.ts
+- admin/src/config/supabase.ts
+- admin/package.json
+
+ARCHIVOS DB
+-----------
+- contexto_ia/db_reconstruida.sql (schema completo + datos demo)
+- contexto_ia/db_alimentacion_extra.sql (datos extra + register_app_user + change_password_app_user)
+
+============================================
+SESION 8 - DARK MODE: CONTRASTE COMPLETO
+============================================
+
+17. APPCOLORS.OF(CONTEXT) - SOLO TEXTOS (primera iteracion)
+    - Se creo AppColorPalette y AppColors.of(BuildContext) en app_colors.dart
+    - Se reemplazaron AppColors.textPrimary/textSecondary/textHint/border/primaryShade
+      por AppColors.of(context).xxx en 15 screens + 6 widgets
+    - Archivo: mobile/lib/core/constants/app_colors.dart
+
+18. DARK MODE: CONTRASTE EN ELEMENTOS NO-TEXTO
+    - Faltaban: fondos de contenedores, bordes, badges, botones, matriz, etc.
+    - Correcciones aplicadas:
+      * matriz_igo_screen.dart: fondo matriz, filterChip, toggle hidden, bordes puntos,
+        badges cluster, lineas cuadricula (border/darkBorder), etiquetas ejes (textHint/darkTextHint)
+      * iniciativas_list_screen.dart: ChoiceChip backgroundColor -> surface
+      * plan_detail_screen.dart: LinearProgressIndicator background -> border
+      * terms_screen.dart: bottom bar background -> surface
+      * igo_sliders_widget.dart: dot border -> surface
+    - Consistencia: audio_recorder_widget.dart (Color(0xFFD32F2F) -> AppColors.error,
+      Colors.red -> AppColors.error), igo_sliders_screen.dart (Colors.white -> textOnPrimary)
+
+19. PLANES: VERDE MAS VIVO + BARRA SIEMPRE VERDE
+    - AppColors.success: 0xFF2E7D32 -> 0xFF4CAF50 (Green 500, mas vivo)
+    - progress_bar_widget.dart: elimina gradiente rojo/amarillo/verde -> siempre success
+    - plan_detail_screen.dart: barra progreso siempre success (no solo al 100%)
+    - planes_list_screen.dart: _PlanCard barra progreso success en vez de primary
+
+============================================
+SESION 9 - RESPONSIVE DESIGN (TODA LA APP MOBILE)
+============================================
+
+20. RESPONSIVE HELPER
+    - Archivo nuevo: mobile/lib/core/utils/responsive_helper.dart
+    - Clase S con metodos estaticos:
+      * S.w(context, percent) -> ancho pantalla * porcentaje
+      * S.h(context, percent) -> alto pantalla * porcentaje
+      * S.sp(context, size) -> font size escalado (respeta textScaler)
+
+21. 22 ARCHIVOS CONVERTIDOS A RESPONSIVE
+    - Padding: todos los EdgeInsets fijos -> S.w() / S.h()
+    - Spacers: todos los SizedBox(height: X) -> S.h(context, 0.0Y)
+    - Fonts: todos los fontSize: X -> S.sp(context, X)
+    - Botones: todos los height: 50 -> S.h(context, 0.065)
+    - Iconos/containers: sizes fijos -> porcentaje del ancho
+    - welcome_screen.dart: Column + Spacer -> SingleChildScrollView + Center (no mas overflow)
+    - igo_sliders_widget.dart: slider height 200 -> S.h(context, 0.22)
+    - splash_screen.dart: logo 120 -> S.w(context, 0.3)
+    - login_screen.dart: logo container 80 -> S.w(context, 0.2)
+    - perfil_screen.dart: avatar radius 48 -> S.w(context, 0.12)
+
+    Archivos modificados:
+    - screens/onboarding/ (welcome, login, register_step1, register_step2, terms)
+    - screens/splash/splash_screen.dart
+    - screens/iniciativas/ (list, detail, create)
+    - screens/planes/ (list, create, detail)
+    - screens/perfil/ (perfil, configuracion)
+    - screens/priorizacion/ (igo_sliders)
+    - screens/matriz/matriz_igo_screen.dart
+    - widgets/ (iniciativa_card, plan_card, audio_recorder, igo_matrix, cuadrante_badge, progress_bar, igo_sliders)
+    - nuevo: responsive_helper.dart
+
+22. ESTADO ACTUAL POST-SESION 9
+    - Flutter analyze: 0 errores, ~65 info/warnings (todos pre-existentes o prefer_const_constructors)
+    - Modulo mobile 100% responsive (se adapta a cualquier tamano de telefono)
+    - Modo oscuro: contraste correcto en todos los elementos (texto + fondos + bordes + badges)
+    - Sin cambios funcionales — solo visuales
+
+============================================
+SESION 10 - CONFIGURACION ENTORNO ANDROID + BUILD APK RELEASE
+============================================
+
+23. ADB Y CONEXION DEL TELEFONO (troubleshooting)
+    - Problema: adb connect por WiFi fallaba (10060 timeout, unauthorized)
+    - Solucion: usar cable USB directo (adb devices mostraba RFCT710TQVT device)
+    - Revocar autorizaciones USB + aceptar RSA desde el telefono resolvio unauthorized
+    - Metodo final: cable USB + flutter run -d RFCT710TQVT
+
+24. CARPETA android/ FALTANTE
+    - mobile/ no tenia carpeta android/ -> AndroidManifest.xml could not be found
+    - Fix: flutter create . --platforms android (genero android/ completa)
+
+25. INSTALACION DE ANDROID STUDIO Y SDK
+    - No tenia Android Studio ni Android SDK
+    - Descarga e instalacion de Android Studio (configuracion Standard)
+    - flutter doctor --android-licenses -> aceptar todas las licencias
+    - NDK (Side by side) 28.2.13676358 instalado automaticamente al hacer build
+    - flutter doctor final: No issues found
+
+26. speech_to_text 6.6.2 -> 7.4.0
+    - speech_to_text: ^6.6.2 usaba jcenter() en su build.gradle (repositorio obsoleto)
+    - Error: Could not find method jcenter() for arguments
+    - Fix: actualizar a speech_to_text: ^7.4.0 en pubspec.yaml
+    - API compatible (solo cambios internos: WASM, MacOS, build Android actualizado)
+    - flutter pub get exitoso
+
+27. INTERNET PERMISSION FALTANTE EN APK RELEASE
+    - Debug (flutter run): Android agrega INTERNET automaticamente
+    - Release (flutter build apk --release): NO lo agrega
+    - Causa raiz del Error: ServerFailure en telefonos de companeros
+      (ellos instalaban APK release sin internet, la app no podia contactar Supabase)
+    - Fix: agregar <uses-permission android:name="android.permission.INTERNET"/>
+      en android/app/src/main/AndroidManifest.xml
+    - flutter clean + flutter pub get + flutter build apk --release
+    - APK release generado: build/app/outputs/flutter-apk/app-release.apk (54.6MB)
+
+ESTADO ACTUAL POST-SESION 10
+----------------------------
+- flutter doctor: No issues found
+- flutter run -d RFCT710TQVT: compila e instala en telefono Samsung (Android 16, API 36)
+- flutter build apk --release: OK (con internet permission corregido)
+- APK listo para distribuir a companeros (primero probar en telefono propio
+  borrando datos de sesion de depuracion)
+
+LO QUE FUNCIONA (mobile)
+-----------------------
+- Todo lo de sesiones anteriores +
+- APK release con internet habilitado para usuarios externos
+
+PASOS SIGUIENTES SUGERIDOS
+--------------------------
+1. Probar APK release en tu telefono: desinstalar app debug, instalar app-release.apk,
+   probar login y registro desde cero (sin cache)
+2. Si funciona, distribuir APK a companeros
+3. Implementar recuperacion de contrasena
+4. Agregar tests unitarios (mobile y admin)
+5. Optimizar chunk size del build admin (code-splitting)
+6. Mejorar UX del tooltip en mobile (matrix dots con informacion al tocar)
+7. Implementar notificaciones push
+8. Buscar diseno UI/UX de referencia (Dribbble, Screenlane, Mobbin) y replicarlo en Flutter
