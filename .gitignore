@@ -35,3 +35,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Archivos con credenciales sensibles
+contexto_ia/credenciales_db.txt

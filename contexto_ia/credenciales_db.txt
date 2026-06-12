@@ -1,3 +1,0 @@
-PROJECT_NAME = igo-manager
-PASSWORD = 46577263Leandro
-
